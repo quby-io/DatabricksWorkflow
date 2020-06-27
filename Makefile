@@ -5,7 +5,6 @@ assembly: ## Creates artifacts
 	sbt assembly
 	echo "OK, assembled."
 
-
 .PHONY: test
 test: ## Runs unit tests
 	cd scala && $(MAKE) test
@@ -13,7 +12,7 @@ test: ## Runs unit tests
 
 .PHONY: integration_test
 integration_test: publish ## Deploys integration_test jobs to Databricks and runs them
-	bash scripts/deploy_jobs.sh integration_test "$(JAR_VERSION)-$(GIT_REVISION)"
+	bash scripts/deploy_jobs.sh --environment=integration_test --build_version="$(JAR_VERSION)-$(GIT_REVISION)"
 	bash scripts/run_jobs.sh integration_test
 
 .PHONY: install_on_cluster
@@ -26,7 +25,12 @@ publish: assembly ## Publishes artifacts on Databricks dbfs
 
 .PHONY: deploy
 deploy: publish ## Deploys artifacts, notebooks and jobs to Databricks [make deploy env=staging]
-	bash scripts/deploy_jobs.sh $(env) "$(JAR_VERSION)-$(GIT_REVISION)"
+	echo "Uploading notebooks and jar"
+	bash scripts/upload_notebooks_and_jar.sh --environment=$(env) --artifact_id="$(JAR_VERSION)-$(GIT_REVISION)"
+ifndef skip-jobs
+	echo "Deploying jobs"
+	bash scripts/deploy_jobs.sh --environment=$(env) --artifact_id="$(JAR_VERSION)-$(GIT_REVISION)"
+endif
 
 .PHONY: import_notebooks
 import_notebooks: ## Imports notebooks from environment deployment [make import_notebooks env=staging]
